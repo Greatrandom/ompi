@@ -32,10 +32,6 @@
 #include "orte/mca/rtc/base/base.h"
 #include "rtc_hwloc.h"
 
-#include "cuda.h"
-#include "cuda_runtime_api.h"
-
-
 static int init(void);
 static void finalize(void);
 static void set(orte_job_t *jdata,
@@ -236,7 +232,7 @@ static void set(orte_job_t *jobdat,
         }
     }
 
-#if (HAVE_CUDA)
+#if (CUDA || OPEN_ACC)
     {
         /* At this point all processes are bound to CPUs that we chose based on GPU
          * location. Since this code is executed BEFORE exec we probably can't call
@@ -245,34 +241,19 @@ static void set(orte_job_t *jobdat,
          * The current solution is to export MCA parameter:
          * OMPI_MCA_rmaps_gpu_no=NUMA#:GPU-in-the-NUMA#
          */
-        int gpuno, numa_idx, gpu_idx, dev;
-        hwloc_obj_t obj, bind_gpu;
-        if (!orte_get_attribute(&child->attributes, ORTE_PROC_GPU_ID, (void**)&gpu_idx, OPAL_INT) ){
-            orte_get_attribute(&child->attributes, ORTE_PROC_HWLOC_LOCALE, (void**)&obj, OPAL_PTR);
-            //int numa_idx = get_numa_index(obj);
-
-            while (obj->type!=HWLOC_OBJ_NODE)
-                   obj=obj->parent;
-            numa_idx = obj->logical_index;
-
-            /*char *mca_val, *mca_name;
+        char/int gpuno;
+        if (!orte_get_attribute(&child->attributes, ORTE_PROC_GPU, (void**)&gpu_idx, OPAL_INT) ){
+            int numa_idx = get_numa_index(obj);
+            char *mca_val, *mca_name;
             asprintf(&mca_val, "%d:%d", numa_idx, gpu_idx);
             (void) mca_base_var_env_name ("rmaps_gpu_no", &mca_name);
             opal_setenv(mca_name, mca_val, 1,environ_copy);
-            */
 
-            char *PciBusId;
-            bind_gpu = opal_hwloc_get_gpu_by_idx(gpu_idx);
-            PciBusId = bind_gpu->attr->pcidev.bus;
-            cudaDeviceGetByPCIBusId(&dev, PciBusId);
-
-            cudaSetDevice(dev);
-
-
-            //cudaSetDevice( cuda_convert( gpu ) );
-//#elif OPEN_ACC
-//           acc_set_device( oacc_convert( gpu) );
-
+#if CUDA
+            cudaSetDevice( cuda_convert( gpu ) );
+#elif OPEN_ACC
+            acc_set_device( oacc_convert( gpu) );
+#endif
         }
     }
 #endif

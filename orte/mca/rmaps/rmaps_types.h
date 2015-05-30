@@ -117,7 +117,7 @@ ORTE_DECLSPEC OBJ_CLASS_DECLARATION(orte_job_map_t);
 /* now take the other round-robin options */
 #define ORTE_MAPPING_BYSLOT            10
 #define ORTE_MAPPING_BYDIST            11
-#if HAVE_CUDA
+#if (CUDA | OPEN_ACC)
 #define ORTE_MAPPING_BYGPU             12
 #endif
 /* convenience - declare anything <= 15 to be round-robin*/

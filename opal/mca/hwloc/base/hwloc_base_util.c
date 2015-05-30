@@ -105,51 +105,19 @@ hwloc_obj_t opal_hwloc_base_get_pu(hwloc_topology_t topo,
     return obj;
 }
 
-static int gpuIndex = 0;
-static hwloc_obj_t gpus[16] = {0};
-
-int test_find_gpu(hwloc_obj_t obj){
-    hwloc_obj_t child;
-    //int result = 0;
-
-    if(obj->attr->pcidev.vendor_id == 0x10de)
-        gpus[gpuIndex++] = obj;
-    child = obj->first_child;
-    while(child){
-        test_find_gpu(child);
-        child = child->next_sibling;
-    }
-
-    int ret_value = gpuIndex;
-    //gpuIndex = 0;
-    return ret_value;
-}
-
-hwloc_obj_t opal_hwloc_get_gpu_by_idx(int idx){
-
-    return gpus[idx];
-}
-
-
-
-hwloc_obj_t opal_hwloc_base_gpu_pci_ids(int numa, int devno)
+char opal_hwloc_bas_gpu_pci_ids(int numa, int devno)
 {
     int *ret = NULL;
-    hwloc_obj_t machine;
+    hwloc_obj_t gpu;
     /* Similar to http://www.open-mpi.org/faq/?category=runcuda#mpi-cuda-support
      * 1. Get NUMA by index
      * 2. Find BRIDGE
      * 3. Get gpudevice's hwloc_obj_t structure into gpu
      */
-    /*machine = hwloc_get_root_obj(opal_hwloc_topology);
-    if(machine->arity < numa){
-        //test_find_gpu(machine->children[numa]);
-    }
-    else return NULL;
-    */
-    if (gpuIndex>devno)
-        return gpus[devno];
-    else return NULL;
+    asprintf(&ret, "%.2x:%.2x:%.2x.%x", gpu->attr->pcidev.domain,
+            gpu->attr->pcidev.bus,
+            gpu->attr->pcidev.dev, gpu->attr->pcidev.func);
+    return ret;
 }
 
 /* determine the node-level available cpuset based on

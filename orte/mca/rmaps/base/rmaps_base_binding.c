@@ -757,7 +757,7 @@ int orte_rmaps_base_compute_bindings(orte_job_t *jdata)
     case ORTE_MAPPING_BYNUMA:
         hwm = HWLOC_OBJ_NODE;
         break;
-#if (HAVE_CUDA)
+#if (CUDA | OPEN_ACC)
     case ORTE_MAPPING_BYGPU:
         // bind to the NUMA that hosts this GPU
         hwm = HWLOC_OBJ_NODE;

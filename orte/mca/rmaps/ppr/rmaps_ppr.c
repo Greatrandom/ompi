@@ -22,7 +22,6 @@
 #include <string.h>
 #endif  /* HAVE_STRING_H */
 
-
 #include "opal/mca/hwloc/base/base.h"
 #include "opal/util/argv.h"
 
@@ -93,15 +92,6 @@ static int ppr_mapper(orte_job_t *jdata)
     char **ppr_req, **ck;
     size_t len;
     bool initial_map=true;
-    bool gpu_mapping = false;
-
-    {
-        int delay = 1;
-        while( delay ){
-            sleep(1);
-        }
-    }
-
 
     /* only handle initial launch of loadbalanced
      * or NPERxxx jobs - allow restarting of failed apps
@@ -214,7 +204,7 @@ static int ppr_mapper(orte_job_t *jdata)
                 ORTE_SET_MAPPING_POLICY(jdata->map->mapping, ORTE_MAPPING_BYNUMA);
             }
             n++;
-#if HAVE_CUDA
+#if (CUDA | OPEN_ACC)
         } else if (0 == strncasecmp(ck[1], "gpu", len)) {
             ppr[OPAL_HWLOC_NUMA_LEVEL] = strtol(ck[0], NULL, 10);
             gpu_mapping = true;
@@ -343,28 +333,30 @@ static int ppr_mapper(orte_job_t *jdata)
                     obj = opal_hwloc_base_get_obj_by_type(node->topology,
                                                           lowest, cache_level,
                                                           i, OPAL_HWLOC_AVAILABLE);
-#if (HAVE_CUDA)
+#if (CUDA | OPEN_ACC)
                     if( gpu_mapping ){
-                        gpu_mapping = false;
-                        int k;
+                        bool gpu_mapping = false;
+                        int proc_num, k;
 
-                        //gpuno = discover_gpu(node->topology,obj);
-                        int gpuno;
-                        gpuno=test_find_gpu(obj);
-
+                        gpuno = discover_gpu(node->topology,obj);
                         if( 0 == gpuno ){
                             // skip this numa node (if gpu_mapping => start = NUMA_LEVEL)
                             continue;
                         }
 
+                        // If we have gpu's on this node - map processes
+                        // TODO: here IB placement may be important. Consider in future.
+                        // Maybe provide option where user will ask for _only_ GPUs that
+                        // reside on the same numa node as any/given IB adapter.
+
                         // We want GPU# * ppr processes per NUMA.
-                        //int proc_num = gpuno * ppr[start];
+                        proc_num = gpuno * ppr[start];
                         // TODO: Check that this numa can handle this number of processes
                         // It depends on what is considered as processing element.
-                        /*if( check(obj, proc_num, pe_type) ){
+                        if( check(obj, proc_num, pe_type) ){
                             rc = ORTE_ERR_OUT_OF_RESOURCE;
                             goto error;
-                        }*/
+                        }
 
                         for( k=0; k < gpuno; k++){
                             for (j=0; j < ppr[start] && nprocs_mapped < total_procs; j++) {
@@ -374,7 +366,7 @@ static int ppr_mapper(orte_job_t *jdata)
                                 }
                                 nprocs_mapped++;
                                 orte_set_attribute(&proc->attributes, ORTE_PROC_HWLOC_LOCALE, ORTE_ATTR_LOCAL, obj, OPAL_PTR);
-                                orte_set_attribute(&proc->attributes, ORTE_PROC_GPU_ID, ORTE_ATTR_LOCAL, k, OPAL_INT);
+                                orte_set_attribute(&proc->attributes, ORTE_PROC_GPU, ORTE_ATTR_LOCAL, k, OPAL_INT);
                             }
                         }
                         continue;

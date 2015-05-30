@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cuda.h>
-#include <cuda_runtime_api.h>
 
 #include "opal/align.h"
 #include "opal/datatype/opal_convertor.h"
@@ -109,8 +108,6 @@ struct cudaFunctionTable {
 #if OPAL_CUDA_GET_ATTRIBUTES
     int (*cuPointerGetAttributes)(unsigned int, CUpointer_attribute *, void **, CUdeviceptr);
 #endif /* OPAL_CUDA_GET_ATTRIBUTES */
-    int (*cudaDeviceGetByPCIBusId)(int* ,char*);
-    int (*cudaSetDevice)(int);
 } cudaFunctionTable;
 typedef struct cudaFunctionTable cudaFunctionTable_t;
 cudaFunctionTable_t cuFunc;
@@ -141,9 +138,6 @@ static int mca_common_cuda_cu_memcpy(void*, const void*, size_t);
 
 /* Function that gets plugged into opal layer */
 static int mca_common_cuda_stage_two_init(opal_common_cuda_function_table_t *);
-
-/* Functions for GPU binding*/
-hwloc_obj_t opal_hwloc_base_gpu_pci_ids(int, int);
 
 /* Structure to hold memory registrations that are delayed until first
  * call to send or receive a GPU pointer */
@@ -482,17 +476,15 @@ int mca_common_cuda_stage_one_init(void)
 
 void mca_common_cuda_bind()
 {
-    char *mca_name, *mca_val, *PciBusId;
-    int dev, numaid, gpuid;
-    hwloc_obj_t bind_gpu;
+    char *mca_name, *mca_val, *pcibusid;
+    int dev;
     (void) mca_base_var_env_name ("rmaps_gpu_no", &mca_name);
     mca_val = getenv(mca_name);
     /* parse mcaval onto numaid and gpuid */
-    sscanf(mca_val , "%d:%d", &numaid, &gpuid);
-    bind_gpu = opal_hwloc_base_gpu_pci_ids(numaid,gpuid);
-    PciBusId = bind_gpu->attr->pcidev.bus;
-    cudaDeviceGetByPCIBusId(&dev, PciBusId);
-
+    pcibusid = opal_hwloc_bas_gpu_pci_ids(numaid,gpuid);
+    cudaDeviceGetByPCIBusId(&dev, pciBusId);
+    /* Will be done for the current thread only :( need the way
+     * to propagate it on pthread_create? */
     cudaSetDevice(dev);
 }
 

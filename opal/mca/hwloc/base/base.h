@@ -97,10 +97,6 @@ OPAL_DECLSPEC int opal_hwloc_base_set_binding_policy(opal_binding_policy_t *poli
  */
 OPAL_DECLSPEC void opal_hwloc_base_get_local_cpuset(void);
 
-OPAL_DECLSPEC int test_find_gpu(hwloc_obj_t obj);
-OPAL_DECLSPEC hwloc_obj_t opal_hwloc_base_gpu_pci_ids(int numa, int devno);
-OPAL_DECLSPEC hwloc_obj_t opal_hwloc_get_gpu_by_idx(int idx);
-
 struct opal_rmaps_numa_node_t {
     opal_list_item_t super;
     int index;
